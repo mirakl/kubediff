@@ -15,6 +15,7 @@ import os
 import subprocess
 import sys
 import yaml
+import re
 
 from ._kube import (
   KubeObject,
@@ -63,6 +64,8 @@ def different_lengths(path, want, have):
 
 missing_item = partial(Difference, "'%s' missing")
 not_equal = partial(Difference, "'%s' != '%s'")
+missing_item_in_running_configuration = partial(Difference, "'%s' missing in running configuration")
+missing_item_in_wished_configuration = partial(Difference, "'%s' missing in wished configuration")
 
 
 def diff_not_equal(path, want, have):
@@ -75,33 +78,45 @@ def diff_lists(path, want, have):
   if not len(want) == len(have):
     yield different_lengths(path, want, have)
 
-  def eq(x, y):
-    return len(list(diff('', x, y))) == 0
+    if re.match('^\.spec\.template\.spec\.containers\[\d+\]\.env$', path):
+      in_want = set(map(lambda x: x['name'], want))
+      in_have = set(map(lambda x: x['name'], have))
+      in_both = in_want & in_have
+      in_want_only = in_want - in_both
+      in_have_only = in_have - in_both
 
-  for i in list_subtract(want, have, eq):
-    yield missing_item(path, "element [%d]" % i)
+      for i in in_want_only:
+        yield Difference("Diff: {} in wished config only".format(i), path)
 
+      for i in in_have_only:
+        yield Difference("Diff: {} in running config only".format(i), path)
 
-def list_subtract(xs, ys, equality=operator.eq):
-  """Return items in 'xs' but not in 'ys'."""
-  matched = set()
-  for i, x in enumerate(xs):
-    for j, y in enumerate(ys):
-      if j in matched:
-        continue
-      if equality(x, y):
-        matched.add(j)
-        break
-    else:
-      yield i
+      want_in_both = filter(lambda x: x['name'] in in_both, want)
+      have_in_both = filter(lambda x: x['name'] in in_both, have)
+
+      for i, (want_v, have_v) in enumerate(zip(want_in_both, have_in_both)):
+        for difference in diff("%s[%d]" % (path, i), want_v, have_v):
+          yield difference
+
+  else:
+    for i, (want_v, have_v) in enumerate(zip(want, have)):
+      for difference in diff("%s[%d]" % (path, i), want_v, have_v):
+        yield difference
 
 
 def diff_dicts(path, want, have):
+  if path == ".metadata.labels":
+    for (k, have_v) in viewitems(have):
+      key_path = "%s.%s" % (path, k)
+
+      if k not in want:
+        yield missing_item_in_wished_configuration(path, k)
+
   for (k, want_v) in viewitems(want):
     key_path = "%s.%s" % (path, k)
 
     if k not in have:
-      yield missing_item(path, k)
+      yield missing_item_in_running_configuration(path, k)
     else:
       for difference in diff(key_path, want_v, have[k]):
         yield difference

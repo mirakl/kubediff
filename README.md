@@ -103,8 +103,9 @@ weaveworks/scope               master-1a1021c        master-14d0e4e
 mkdir -p $GOPATH/src/github.com/prometheus && cd "$_"
 git clone git@github.com:prometheus/client_golang.git
 mkdir -p $GOPATH/src/github.com/weaveworks && cd "$_"
-git clone git@github.com:weaveworks/kubediff.git
+git clone git@github.com:mirakl/kubediff.git
 cd kubediff
+git checkout mirakl_fork
 make
 ```
 
