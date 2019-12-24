@@ -3,7 +3,7 @@
 
 all: .uptodate
 
-IMAGE_VERSION := 3
+IMAGE_VERSION := 4
 GIT_REVISION := $(shell git rev-parse HEAD)
 
 # Python-specific stuff

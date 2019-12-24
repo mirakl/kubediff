@@ -1,9 +1,9 @@
-FROM alpine:3.9
+FROM alpine:3.11
 WORKDIR /
 
 RUN apk update && \
    apk add py2-pip curl && \
-   curl -o /bin/kubectl https://storage.googleapis.com/kubernetes-release/release/v1.13.3/bin/linux/amd64/kubectl && \
+   curl -o /bin/kubectl https://storage.googleapis.com/kubernetes-release/release/v1.13.12/bin/linux/amd64/kubectl && \
    chmod u+x /bin/kubectl
 
 COPY . /tmp/kubediff/
